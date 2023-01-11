@@ -194,10 +194,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.run = void 0;
 const core = __importStar(__nccwpck_require__(2186));
+const exec_1 = __nccwpck_require__(1514);
 const github = __importStar(__nccwpck_require__(5438));
 const pull_request_1 = __nccwpck_require__(1843);
 const query_1 = __nccwpck_require__(6053);
-const exec_1 = __nccwpck_require__(1514);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         const token = core.getInput('token', {
@@ -211,7 +211,7 @@ function run() {
         core.debug(`base=${base}; target=${target}; label-name=${labelName}`);
         const octokit = github.getOctokit(token);
         const { owner, repo } = github.context.repo;
-        core.info(`owner=${owner}; repo=${repo}`);
+        core.debug(`owner=${owner}; repo=${repo}`);
         const queryService = new query_1.QueryService(octokit);
         const pullRequestService = new pull_request_1.PullRequestService(queryService, owner, repo);
         const prs = yield pullRequestService.getAllPRs();
@@ -222,52 +222,36 @@ function run() {
         core.info(`found ${prsWithSpecifiedLabel.length} PRs with the ${labelName} label`);
         const successPRs = [];
         const failedPRs = [];
-        yield beforeMerge(email, name, base, target);
-        for (const pr of prsWithSpecifiedLabel) {
-            const success = yield merge(base, pr);
-            success ? successPRs.push(pr) : failedPRs.push(pr);
-        }
-        yield afterMerge(target);
-        core.info('merged successful PRs:');
-        successPRs.forEach((pr) => core.info(`- ${pr.title} #${pr.number} (${pr.url})`));
-        if (failedPRs.length > 0) {
-            core.error('merged failed PRs (need to merge manually):');
-            failedPRs.forEach((pr) => core.error(`- ${pr.title} #${pr.number} (${pr.url})`));
-            core.setFailed(`${failedPRs.length} PRs failed to merge`);
-        }
-    });
-}
-exports.run = run;
-function beforeMerge(email, name, base, target) {
-    return __awaiter(this, void 0, void 0, function* () {
         yield (0, exec_1.exec)(`git config --global user.email ${email}`);
         yield (0, exec_1.exec)(`git config --global user.name ${name}`);
         yield (0, exec_1.exec)('git fetch origin');
         yield (0, exec_1.exec)(`git checkout ${base}`);
         yield (0, exec_1.exec)('git pull origin');
         yield (0, exec_1.exec)(`git checkout -b ${target}`);
-    });
-}
-function merge(base, pr) {
-    return __awaiter(this, void 0, void 0, function* () {
-        if (pr.baseRefName !== base) {
-            core.warning(`the base branch of #${pr.number} PR (${pr.url}) is ${pr.baseRefName} not ${base}`);
+        for (const pr of prsWithSpecifiedLabel) {
+            if (pr.baseRefName !== base) {
+                core.warning(`the base branch of #${pr.number} PR (${pr.url}) is ${pr.baseRefName} not ${base}`);
+            }
+            try {
+                yield (0, exec_1.exec)(`git merge origin/${pr.headRefName}`);
+                successPRs.push(pr);
+            }
+            catch (error) {
+                (0, exec_1.exec)('git merge --abort');
+                failedPRs.push(pr);
+            }
         }
-        try {
-            yield (0, exec_1.exec)(`git merge origin/${pr.headRefName}`);
-        }
-        catch (error) {
-            (0, exec_1.exec)('git merge --abort');
-            return false;
-        }
-        return true;
-    });
-}
-function afterMerge(target) {
-    return __awaiter(this, void 0, void 0, function* () {
         yield (0, exec_1.exec)(`git push origin ${target} -f`);
+        core.info('merged successful PRs:');
+        successPRs.forEach((pr) => core.info(`- ${pr.title} (${pr.url})`));
+        if (failedPRs.length > 0) {
+            core.error('merged failed PRs (need to merge manually):');
+            failedPRs.forEach((pr) => core.error(`- ${pr.title} (${pr.url})`));
+            core.setFailed(`${failedPRs.length} PRs failed to merge`);
+        }
     });
 }
+exports.run = run;
 
 
 /***/ }),

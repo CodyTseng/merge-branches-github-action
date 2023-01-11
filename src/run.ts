@@ -1,9 +1,9 @@
 import * as core from '@actions/core';
+import { exec } from '@actions/exec';
 import * as github from '@actions/github';
+import { PullRequest } from './interface';
 import { PullRequestService } from './pull-request';
 import { QueryService } from './query';
-import { exec } from '@actions/exec';
-import { PullRequest } from './interface';
 
 export async function run() {
   const token = core.getInput('token', {
@@ -20,7 +20,7 @@ export async function run() {
   const octokit = github.getOctokit(token);
   const { owner, repo } = github.context.repo;
 
-  core.info(`owner=${owner}; repo=${repo}`);
+  core.debug(`owner=${owner}; repo=${repo}`);
 
   const queryService = new QueryService(octokit);
   const pullRequestService = new PullRequestService(queryService, owner, repo);
@@ -43,58 +43,36 @@ export async function run() {
   const successPRs: PullRequest[] = [];
   const failedPRs: PullRequest[] = [];
 
-  await beforeMerge(email, name, base, target);
-
-  for (const pr of prsWithSpecifiedLabel) {
-    const success = await merge(base, pr);
-    success ? successPRs.push(pr) : failedPRs.push(pr);
-  }
-
-  await afterMerge(target);
-
-  core.info('merged successful PRs:');
-  successPRs.forEach((pr) =>
-    core.info(`- ${pr.title} #${pr.number} (${pr.url})`),
-  );
-
-  if (failedPRs.length > 0) {
-    core.error('merged failed PRs (need to merge manually):');
-    failedPRs.forEach((pr) =>
-      core.error(`- ${pr.title} #${pr.number} (${pr.url})`),
-    );
-    core.setFailed(`${failedPRs.length} PRs failed to merge`);
-  }
-}
-
-async function beforeMerge(
-  email: string,
-  name: string,
-  base: string,
-  target: string,
-) {
   await exec(`git config --global user.email ${email}`);
   await exec(`git config --global user.name ${name}`);
   await exec('git fetch origin');
   await exec(`git checkout ${base}`);
   await exec('git pull origin');
   await exec(`git checkout -b ${target}`);
-}
 
-async function merge(base: string, pr: PullRequest) {
-  if (pr.baseRefName !== base) {
-    core.warning(
-      `the base branch of #${pr.number} PR (${pr.url}) is ${pr.baseRefName} not ${base}`,
-    );
+  for (const pr of prsWithSpecifiedLabel) {
+    if (pr.baseRefName !== base) {
+      core.warning(
+        `the base branch of #${pr.number} PR (${pr.url}) is ${pr.baseRefName} not ${base}`,
+      );
+    }
+    try {
+      await exec(`git merge origin/${pr.headRefName}`);
+      successPRs.push(pr);
+    } catch (error) {
+      exec('git merge --abort');
+      failedPRs.push(pr);
+    }
   }
-  try {
-    await exec(`git merge origin/${pr.headRefName}`);
-  } catch (error) {
-    exec('git merge --abort');
-    return false;
-  }
-  return true;
-}
 
-async function afterMerge(target: string) {
   await exec(`git push origin ${target} -f`);
+
+  core.info('merged successful PRs:');
+  successPRs.forEach((pr) => core.info(`- ${pr.title} (${pr.url})`));
+
+  if (failedPRs.length > 0) {
+    core.error('merged failed PRs (need to merge manually):');
+    failedPRs.forEach((pr) => core.error(`- ${pr.title} (${pr.url})`));
+    core.setFailed(`${failedPRs.length} PRs failed to merge`);
+  }
 }

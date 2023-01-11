@@ -1,6 +1,6 @@
-name: 'Your name here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: 'Merge PRs by label'
+description: 'Merge all PRs with the specified label into a branch based on the specified branch.'
+author: 'CodyTseng'
 inputs:
   token:
     required: true

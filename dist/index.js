@@ -206,6 +206,8 @@ function run() {
         const base = core.getInput('base');
         const target = core.getInput('target');
         const labelName = core.getInput('label-name');
+        const email = core.getInput('email');
+        const name = core.getInput('name');
         core.debug(`base=${base}; target=${target}; label-name=${labelName}`);
         const octokit = github.getOctokit(token);
         const { owner, repo } = github.context.repo;
@@ -220,7 +222,7 @@ function run() {
         core.info(`found ${prsWithSpecifiedLabel.length} PRs with the ${labelName} label`);
         const successPRs = [];
         const failedPRs = [];
-        yield beforeMerge(base, target);
+        yield beforeMerge(email, name, base, target);
         for (const pr of prsWithSpecifiedLabel) {
             const success = yield merge(base, pr);
             success ? successPRs.push(pr) : failedPRs.push(pr);
@@ -236,8 +238,10 @@ function run() {
     });
 }
 exports.run = run;
-function beforeMerge(base, target) {
+function beforeMerge(email, name, base, target) {
     return __awaiter(this, void 0, void 0, function* () {
+        yield (0, exec_1.exec)(`git config --global user.email ${email}`);
+        yield (0, exec_1.exec)(`git config --global user.name ${name}`);
         yield (0, exec_1.exec)('git fetch origin');
         yield (0, exec_1.exec)(`git checkout ${base}`);
         yield (0, exec_1.exec)('git pull origin');

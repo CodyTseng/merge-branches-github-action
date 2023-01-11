@@ -10,6 +10,12 @@ inputs:
     required: true
   label-name:
     required: true
+  email:
+    required: false
+    default: merge-prs-bot@github.com
+  name:
+    required: false
+    default: merge-prs-bot
 runs:
   using: 'node16'
   main: 'dist/index.js'

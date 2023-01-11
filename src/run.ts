@@ -13,6 +13,8 @@ export async function run() {
   const base = core.getInput('base');
   const target = core.getInput('target');
   const labelName = core.getInput('label-name');
+  const email = core.getInput('email');
+  const name = core.getInput('name');
   core.debug(`base=${base}; target=${target}; label-name=${labelName}`);
 
   const octokit = github.getOctokit(token);
@@ -41,7 +43,7 @@ export async function run() {
   const successPRs: PullRequest[] = [];
   const failedPRs: PullRequest[] = [];
 
-  await beforeMerge(base, target);
+  await beforeMerge(email, name, base, target);
 
   for (const pr of prsWithSpecifiedLabel) {
     const success = await merge(base, pr);
@@ -64,7 +66,14 @@ export async function run() {
   }
 }
 
-async function beforeMerge(base: string, target: string) {
+async function beforeMerge(
+  email: string,
+  name: string,
+  base: string,
+  target: string,
+) {
+  await exec(`git config --global user.email ${email}`);
+  await exec(`git config --global user.name ${name}`);
   await exec('git fetch origin');
   await exec(`git checkout ${base}`);
   await exec('git pull origin');

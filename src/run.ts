@@ -2,7 +2,8 @@ import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { PullRequestService } from './pull-request';
 import { QueryService } from './query';
-import * as exec from '@actions/exec';
+import { exec } from '@actions/exec';
+import { PullRequest } from './interface';
 
 export async function run() {
   const token = core.getInput('token', {
@@ -37,23 +38,50 @@ export async function run() {
     `found ${prsWithSpecifiedLabel.length} PRs with the ${labelName} label`,
   );
 
-  await exec.exec('git fetch origin');
-  await exec.exec(`git checkout ${base}`);
-  await exec.exec(`git checkout -b ${target}`);
+  const successPRs: PullRequest[] = [];
+  const failedPRs: PullRequest[] = [];
+
+  await beforeMerge(base, target);
 
   for (const pr of prsWithSpecifiedLabel) {
-    if (pr.baseRefName !== base) {
-      core.warning(
-        `the base branch of #${pr.number} PR (${pr.url}) is ${pr.baseRefName} not ${base}`,
-      );
-    }
-    try {
-      await exec.exec(`git merge origin/${pr.headRefName}`);
-    } catch (error) {
-      core.setFailed(`#${pr.number} PR (${pr.url}) merge failed`);
-      throw error;
-    }
+    const success = await merge(base, pr);
+    success ? successPRs.push(pr) : failedPRs.push(pr);
   }
 
-  await exec.exec(`git push origin ${target} -f`);
+  afterMerge(target);
+
+  core.info('merged successful PRs:');
+  successPRs.forEach((pr) => core.info(`- #${pr.number} PR (${pr.url})`));
+
+  core.error('merged failed PRs (need to merge manually):');
+  failedPRs.forEach((pr) => core.error(`- #${pr.number} PR (${pr.url})`));
+  if (failedPRs.length > 0) {
+    core.setFailed(`${failedPRs.length} PRs failed to merge`);
+  }
+}
+
+async function beforeMerge(base: string, target: string) {
+  await exec('git fetch origin');
+  await exec(`git checkout ${base}`);
+  await exec('git pull origin');
+  await exec(`git checkout -b ${target}`);
+}
+
+async function merge(base: string, pr: PullRequest) {
+  if (pr.baseRefName !== base) {
+    core.warning(
+      `the base branch of #${pr.number} PR (${pr.url}) is ${pr.baseRefName} not ${base}`,
+    );
+  }
+  try {
+    await exec(`git merge origin/${pr.headRefName}`);
+  } catch (error) {
+    exec('git merge --abort');
+    return false;
+  }
+  return true;
+}
+
+async function afterMerge(target: string) {
+  await exec(`git push origin ${target} -f`);
 }

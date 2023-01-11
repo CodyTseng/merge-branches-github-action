@@ -227,7 +227,7 @@ function run() {
             const success = yield merge(base, pr);
             success ? successPRs.push(pr) : failedPRs.push(pr);
         }
-        afterMerge(target);
+        yield afterMerge(target);
         core.info('merged successful PRs:');
         successPRs.forEach((pr) => core.info(`- ${pr.title} #${pr.number} (${pr.url})`));
         if (failedPRs.length > 0) {

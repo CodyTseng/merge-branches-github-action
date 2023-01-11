@@ -50,7 +50,7 @@ export async function run() {
     success ? successPRs.push(pr) : failedPRs.push(pr);
   }
 
-  afterMerge(target);
+  await afterMerge(target);
 
   core.info('merged successful PRs:');
   successPRs.forEach((pr) =>

@@ -196,7 +196,7 @@ const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const pull_request_1 = __nccwpck_require__(1843);
 const query_1 = __nccwpck_require__(6053);
-const exec = __importStar(__nccwpck_require__(1514));
+const exec_1 = __nccwpck_require__(1514);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         const token = core.getInput('token', {
@@ -217,25 +217,52 @@ function run() {
             .filter((pr) => pr.labels.nodes.some((label) => label.name === labelName))
             .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
         core.info(`found ${prsWithSpecifiedLabel.length} PRs with the ${labelName} label`);
-        yield exec.exec('git fetch origin');
-        yield exec.exec(`git checkout ${base}`);
-        yield exec.exec(`git checkout -b ${target}`);
+        const successPRs = [];
+        const failedPRs = [];
+        yield beforeMerge(base, target);
         for (const pr of prsWithSpecifiedLabel) {
-            if (pr.baseRefName !== base) {
-                core.warning(`the base branch of #${pr.number} PR (${pr.url}) is ${pr.baseRefName} not ${base}`);
-            }
-            try {
-                yield exec.exec(`git merge origin/${pr.headRefName}`);
-            }
-            catch (error) {
-                core.setFailed(`#${pr.number} PR (${pr.url}) merge failed`);
-                throw error;
-            }
+            const success = yield merge(base, pr);
+            success ? successPRs.push(pr) : failedPRs.push(pr);
         }
-        yield exec.exec(`git push origin ${target} -f`);
+        afterMerge(target);
+        core.info('merged successful PRs:');
+        successPRs.forEach((pr) => core.info(`- #${pr.number} PR (${pr.url})`));
+        core.error('merged failed PRs (need to merge manually):');
+        failedPRs.forEach((pr) => core.error(`- #${pr.number} PR (${pr.url})`));
+        if (failedPRs.length > 0) {
+            core.setFailed(`${failedPRs.length} PRs failed to merge`);
+        }
     });
 }
 exports.run = run;
+function beforeMerge(base, target) {
+    return __awaiter(this, void 0, void 0, function* () {
+        yield (0, exec_1.exec)('git fetch origin');
+        yield (0, exec_1.exec)(`git checkout ${base}`);
+        yield (0, exec_1.exec)('git pull origin');
+        yield (0, exec_1.exec)(`git checkout -b ${target}`);
+    });
+}
+function merge(base, pr) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (pr.baseRefName !== base) {
+            core.warning(`the base branch of #${pr.number} PR (${pr.url}) is ${pr.baseRefName} not ${base}`);
+        }
+        try {
+            yield (0, exec_1.exec)(`git merge origin/${pr.headRefName}`);
+        }
+        catch (error) {
+            (0, exec_1.exec)('git merge --abort');
+            return false;
+        }
+        return true;
+    });
+}
+function afterMerge(target) {
+    return __awaiter(this, void 0, void 0, function* () {
+        yield (0, exec_1.exec)(`git push origin ${target} -f`);
+    });
+}
 
 
 /***/ }),

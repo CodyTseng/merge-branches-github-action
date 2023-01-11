@@ -1,7 +1,20 @@
 name: 'test'
 on:
-  pull_request:
   workflow_dispatch:
+    inputs:
+      base:
+        description: 'Base branch name'
+        required: true
+        default: 'main'
+        type: string
+      target:
+        description: 'Target branch name'
+        required: true
+        type: string
+      label-name:
+        description: 'A label name to find PRs to merge'
+        required: true
+        type: string
 
 permissions: write-all
 
@@ -13,6 +26,6 @@ jobs:
       - uses: ./
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          base: main
-          target: testing
-          label-name: testing
+          base: ${{ inputs.base }}
+          target: ${{ inputs.target }}
+          label-name: ${{ inputs.label-name }}

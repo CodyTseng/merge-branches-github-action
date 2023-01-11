@@ -51,11 +51,15 @@ export async function run() {
   afterMerge(target);
 
   core.info('merged successful PRs:');
-  successPRs.forEach((pr) => core.info(`- #${pr.number} PR (${pr.url})`));
+  successPRs.forEach((pr) =>
+    core.info(`- ${pr.title} #${pr.number} PR (${pr.url})`),
+  );
 
-  core.error('merged failed PRs (need to merge manually):');
-  failedPRs.forEach((pr) => core.error(`- #${pr.number} PR (${pr.url})`));
   if (failedPRs.length > 0) {
+    core.error('merged failed PRs (need to merge manually):');
+    failedPRs.forEach((pr) =>
+      core.error(`- ${pr.title} #${pr.number} PR (${pr.url})`),
+    );
     core.setFailed(`${failedPRs.length} PRs failed to merge`);
   }
 }

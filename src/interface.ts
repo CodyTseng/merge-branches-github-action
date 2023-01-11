@@ -10,6 +10,7 @@ export interface Label {
 export interface PullRequest {
   id: string;
   number: number;
+  title: string;
   url: string;
   createdAt: string;
   headRefName: string;

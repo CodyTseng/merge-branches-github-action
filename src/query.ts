@@ -14,6 +14,7 @@ export class QueryService {
             nodes {
               id
               number
+              title
               url
               createdAt
               headRefName

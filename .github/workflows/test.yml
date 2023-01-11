@@ -1,5 +1,7 @@
 name: 'test'
-on: workflow_dispatch
+on:
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   test: # make sure the action works on a clean machine without building

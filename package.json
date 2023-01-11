@@ -1,8 +1,8 @@
 {
-  "name": "typescript-action",
+  "name": "merge-prs-action",
   "version": "0.0.0",
   "private": true,
-  "description": "TypeScript template action",
+  "description": "Merge all PRs with the specified label into a branch based on the specified branch.",
   "main": "lib/main.js",
   "scripts": {
     "build": "tsc",
@@ -15,17 +15,19 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/actions/typescript-action.git"
+    "url": "git+https://github.com/CodyTseng/merge-prs-action.git"
   },
   "keywords": [
     "actions",
     "node",
     "setup"
   ],
-  "author": "",
+  "author": "codytseng",
   "license": "MIT",
   "dependencies": {
-    "@actions/core": "^1.10.0"
+    "@actions/core": "^1.10.0",
+    "@actions/exec": "^1.1.1",
+    "@actions/github": "^5.1.1"
   },
   "devDependencies": {
     "@types/node": "^18.11.0",

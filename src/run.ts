@@ -66,8 +66,9 @@ export async function run() {
     }
   }
 
+  await exec(`git push origin ${target} -f`);
+
   if (successPRs.length > 0) {
-    await exec(`git push origin ${target} -f`);
     core.info('merged successful PRs:');
     successPRs.forEach((pr) => core.info(`- ${pr.title} (${pr.url})`));
   }

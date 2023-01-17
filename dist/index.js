@@ -242,8 +242,8 @@ function run() {
                 failedPRs.push(pr);
             }
         }
+        yield (0, exec_1.exec)(`git push origin ${target} -f`);
         if (successPRs.length > 0) {
-            yield (0, exec_1.exec)(`git push origin ${target} -f`);
             core.info('merged successful PRs:');
             successPRs.forEach((pr) => core.info(`- ${pr.title} (${pr.url})`));
         }
